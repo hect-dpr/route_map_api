@@ -45,6 +45,18 @@ class FuelOptimizerTests(SimpleTestCase):
         names = [s.name for s in plan.stops]
         self.assertIn("cheap", names)
 
+    def test_first_stop_is_cheapest_in_range_not_nearest(self):
+        # Within the opening 500 mi window: early expensive vs later cheap.
+        # Old quirk (last_price=inf) picked nearest; correct pick is cheapest.
+        stations = [
+            _station(100, 4.00, "near_expensive"),
+            _station(400, 2.50, "far_cheap"),
+            _station(700, 3.00, "later"),
+        ]
+        plan = plan_fuel_stops(stations, total_distance_miles=800)
+        self.assertTrue(plan.stops)
+        self.assertEqual(plan.stops[0].name, "far_cheap")
+
 
 class RouteApiSmokeTests(TestCase):
     def test_missing_params(self):

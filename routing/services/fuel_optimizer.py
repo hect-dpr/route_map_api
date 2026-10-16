@@ -12,8 +12,10 @@ Algorithm
 ---------
 While the destination is not reachable on remaining fuel:
   1. Consider stations within the current remaining range.
-  2. If any is cheaper than the last fill price, drive to the nearest
-     of those; otherwise drive to the cheapest reachable station.
+  2. Choose where to stop:
+       - First stop (no prior fill price): cheapest reachable station.
+       - Later: if any reachable station is cheaper than the last fill,
+         drive to the nearest of those; otherwise the cheapest reachable.
   3. At that station buy the minimum gallons needed:
        - enough to reach the next cheaper station within a full tank, or
        - enough to reach the destination if it lies within a full tank, or
@@ -98,11 +100,17 @@ def plan_fuel_stops(
                 f"{total_distance_miles:.1f})"
             )
 
-        cheaper = [s for s in reachable if s.retail_price < last_price]
-        if cheaper:
-            target = min(cheaper, key=lambda s: s.route_mile)
-        else:
+        # First fill: last_price is +inf, so every station looks "cheaper" and
+        # picking the nearest would stop at the earliest station in range.
+        # With no prior purchase price, choose the cheapest reachable instead.
+        if last_price == float("inf"):
             target = min(reachable, key=lambda s: (s.retail_price, s.route_mile))
+        else:
+            cheaper = [s for s in reachable if s.retail_price < last_price]
+            if cheaper:
+                target = min(cheaper, key=lambda s: s.route_mile)
+            else:
+                target = min(reachable, key=lambda s: (s.retail_price, s.route_mile))
 
         # Drive to target
         fuel -= (target.route_mile - position) / mpg
